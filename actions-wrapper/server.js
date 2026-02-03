@@ -157,19 +157,29 @@ app.post("/api/search", requireAuth, async (req, res) => {
     }
 
     const conditions = normalizeConditions(body);
-    const order_by = typeof body.order_by === "string" ? body.order_by.trim() : "";
     const limit = typeof body.limit === "number" ? body.limit : undefined;
 
-    // Always use VentureLab's customer ID and MCC
+    // Normalize orderings to array format (Python MCP expects "orderings" as List[str])
+    let orderings = [];
+    if (Array.isArray(body.orderings)) {
+      orderings = body.orderings.filter((x) => typeof x === "string" && x.trim());
+    } else if (typeof body.orderings === "string" && body.orderings.trim()) {
+      orderings = [body.orderings.trim()];
+    } else if (typeof body.order_by === "string" && body.order_by.trim()) {
+      // Support legacy "order_by" parameter name
+      orderings = [body.order_by.trim()];
+    }
+
+    // Always use VentureLab's customer ID
+    // Note: login_customer_id (MCC) is set via GOOGLE_ADS_LOGIN_CUSTOMER_ID env var on the MCP server
     const args = {
       customer_id: VENTURELAB_CUSTOMER_ID,
-      login_customer_id: MCC_LOGIN_CUSTOMER_ID,
       resource,
       fields
     };
-    
+
     if (conditions.length) args.conditions = conditions;
-    if (order_by) args.order_by = order_by;
+    if (orderings.length) args.orderings = orderings;
     if (typeof limit === "number") args.limit = limit;
 
     const result = await callMcpTool("search", args);
