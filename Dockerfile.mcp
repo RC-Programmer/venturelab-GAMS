@@ -10,4 +10,4 @@ RUN pip3 install --break-system-packages .
 
 RUN npm install -g supergateway
 
-CMD ["sh", "-c", "supergateway --port $PORT --outputTransport streamableHttp --stateful --healthEndpoint /healthz --stdio \"google-ads-mcp\""]
+CMD ["sh", "-c", "supergateway --port $PORT --outputTransport streamableHttp --healthEndpoint /healthz --stdio \"google-ads-mcp\""]
