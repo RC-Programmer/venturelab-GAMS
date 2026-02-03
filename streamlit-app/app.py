@@ -22,9 +22,7 @@ RESOURCE_FIELDS = {
         "campaign.name",
         "campaign.status",
         "campaign.advertising_channel_type",
-        "campaign.start_date",
-        "campaign.end_date",
-        "campaign.budget_amount_micros",
+        "campaign.bidding_strategy_type",
     ],
     "ad_group": [
         "ad_group.id",
@@ -36,7 +34,6 @@ RESOURCE_FIELDS = {
     ],
     "ad_group_ad": [
         "ad_group_ad.ad.id",
-        "ad_group_ad.ad.name",
         "ad_group_ad.status",
         "ad_group_ad.ad.type",
         "ad_group.id",
@@ -57,7 +54,6 @@ RESOURCE_FIELDS = {
         "campaign_budget.id",
         "campaign_budget.name",
         "campaign_budget.amount_micros",
-        "campaign_budget.status",
         "campaign_budget.delivery_method",
     ],
     "customer": [
@@ -66,15 +62,14 @@ RESOURCE_FIELDS = {
         "customer.currency_code",
         "customer.time_zone",
     ],
-    "metrics (campaign level)": [
+    "campaign (with metrics)": [
         "campaign.id",
         "campaign.name",
+        "campaign.status",
         "metrics.impressions",
         "metrics.clicks",
         "metrics.cost_micros",
         "metrics.conversions",
-        "metrics.ctr",
-        "metrics.average_cpc",
     ],
 }
 
