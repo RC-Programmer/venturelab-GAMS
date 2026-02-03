@@ -7,6 +7,11 @@ import streamlit as st
 import requests
 import pandas as pd
 import json
+import os
+
+# Configuration from environment variables
+API_URL = os.environ.get("MCP_WRAPPER_URL", "")
+API_TOKEN = os.environ.get("API_TOKEN", "")
 
 # Page config
 st.set_page_config(
@@ -77,15 +82,17 @@ RESOURCE_FIELDS = {
 def init_session_state():
     """Initialize session state variables."""
     if "api_url" not in st.session_state:
-        st.session_state.api_url = ""
+        st.session_state.api_url = API_URL
     if "api_token" not in st.session_state:
-        st.session_state.api_token = ""
+        st.session_state.api_token = API_TOKEN
     if "connected" not in st.session_state:
         st.session_state.connected = False
     if "account_info" not in st.session_state:
         st.session_state.account_info = None
     if "last_result" not in st.session_state:
         st.session_state.last_result = None
+    if "auto_connected" not in st.session_state:
+        st.session_state.auto_connected = False
 
 
 def make_request(endpoint: str, method: str = "GET", data: dict = None, expect_json: bool = True) -> dict:
@@ -140,41 +147,64 @@ def test_connection():
     return False, result.get("error", "Connection failed")
 
 
+def auto_connect():
+    """Auto-connect if credentials are configured via environment variables."""
+    if (API_URL and API_TOKEN and
+        not st.session_state.connected and
+        not st.session_state.auto_connected):
+        st.session_state.auto_connected = True
+        success, _ = test_connection()
+        return success
+    return False
+
+
 def render_sidebar():
     """Render the sidebar with connection settings."""
     st.sidebar.title("🔧 Connection Settings")
 
-    # API URL input
-    api_url = st.sidebar.text_input(
-        "API URL",
-        value=st.session_state.api_url,
-        placeholder="https://your-app.railway.app",
-        help="The Railway URL of your Google Ads MCP wrapper"
-    )
+    # Check if credentials are from environment variables
+    has_env_credentials = bool(API_URL and API_TOKEN)
 
-    # API Token input
-    api_token = st.sidebar.text_input(
-        "API Token",
-        value=st.session_state.api_token,
-        type="password",
-        help="Your API authentication token"
-    )
+    if has_env_credentials:
+        # Credentials are configured - show status only
+        st.sidebar.info("Credentials configured via environment")
+        if not st.session_state.connected:
+            if st.sidebar.button("🔌 Connect", use_container_width=True):
+                with st.spinner("Connecting..."):
+                    success, message = test_connection()
+                    if success:
+                        st.sidebar.success(message)
+                    else:
+                        st.sidebar.error(message)
+    else:
+        # No env credentials - show manual input
+        api_url = st.sidebar.text_input(
+            "API URL",
+            value=st.session_state.api_url,
+            placeholder="https://your-app.railway.app",
+            help="The Railway URL of your Google Ads MCP wrapper"
+        )
 
-    # Update session state
-    st.session_state.api_url = api_url
-    st.session_state.api_token = api_token
+        api_token = st.sidebar.text_input(
+            "API Token",
+            value=st.session_state.api_token,
+            type="password",
+            help="Your API authentication token"
+        )
 
-    # Connect button
-    if st.sidebar.button("🔌 Connect", use_container_width=True):
-        if not api_url or not api_token:
-            st.sidebar.error("Please enter both URL and token")
-        else:
-            with st.spinner("Connecting..."):
-                success, message = test_connection()
-                if success:
-                    st.sidebar.success(message)
-                else:
-                    st.sidebar.error(message)
+        st.session_state.api_url = api_url
+        st.session_state.api_token = api_token
+
+        if st.sidebar.button("🔌 Connect", use_container_width=True):
+            if not api_url or not api_token:
+                st.sidebar.error("Please enter both URL and token")
+            else:
+                with st.spinner("Connecting..."):
+                    success, message = test_connection()
+                    if success:
+                        st.sidebar.success(message)
+                    else:
+                        st.sidebar.error(message)
 
     # Show connection status
     if st.session_state.connected:
@@ -339,6 +369,9 @@ def main():
     """Main application entry point."""
     init_session_state()
 
+    # Auto-connect if credentials are configured via environment variables
+    auto_connect()
+
     # Header
     st.title("📊 VentureLab Google Ads")
     st.markdown("Query your Google Ads data through the MCP connector")
@@ -349,7 +382,10 @@ def main():
 
     # Main content
     if not st.session_state.connected:
-        st.info("👈 Enter your API URL and token in the sidebar to get started")
+        if API_URL and API_TOKEN:
+            st.info("Click **Connect** in the sidebar to connect to the API")
+        else:
+            st.info("👈 Enter your API URL and token in the sidebar to get started")
 
         # Quick start guide
         with st.expander("📖 Quick Start Guide"):
