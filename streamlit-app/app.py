@@ -93,7 +93,7 @@ def init_session_state():
         st.session_state.last_result = None
 
 
-def make_request(endpoint: str, method: str = "GET", data: dict = None) -> dict:
+def make_request(endpoint: str, method: str = "GET", data: dict = None, expect_json: bool = True) -> dict:
     """Make an authenticated request to the API."""
     url = f"{st.session_state.api_url.rstrip('/')}{endpoint}"
     headers = {
@@ -108,7 +108,16 @@ def make_request(endpoint: str, method: str = "GET", data: dict = None) -> dict:
             response = requests.post(url, headers=headers, json=data, timeout=60)
 
         response.raise_for_status()
-        return {"success": True, "data": response.json()}
+
+        # Handle non-JSON responses (like /healthz which returns plain text)
+        if not expect_json:
+            return {"success": True, "data": response.text}
+
+        try:
+            return {"success": True, "data": response.json()}
+        except requests.exceptions.JSONDecodeError:
+            # Response is not JSON, return as text
+            return {"success": True, "data": response.text}
     except requests.exceptions.RequestException as e:
         error_msg = str(e)
         if hasattr(e, "response") and e.response is not None:
@@ -122,7 +131,7 @@ def make_request(endpoint: str, method: str = "GET", data: dict = None) -> dict:
 
 def test_connection():
     """Test the API connection."""
-    result = make_request("/healthz")
+    result = make_request("/healthz", expect_json=False)
     if result["success"]:
         # Also fetch account info
         info_result = make_request("/api/info")
