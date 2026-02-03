@@ -90,15 +90,25 @@ def _get_googleads_client() -> GoogleAdsClient:
     )
 
 
-_googleads_client = _get_googleads_client()
+# Lazy initialization: client is created on first use, not at module import time.
+# This prevents startup crashes when environment variables are not yet configured.
+_googleads_client: GoogleAdsClient | None = None
+
+
+def _get_or_create_client() -> GoogleAdsClient:
+    """Returns the Google Ads client, creating it lazily on first call."""
+    global _googleads_client
+    if _googleads_client is None:
+        _googleads_client = _get_googleads_client()
+    return _googleads_client
 
 
 def get_googleads_service(serviceName: str) -> GoogleAdsServiceClient:
-    return _googleads_client.get_service(serviceName, interceptors=[MCPHeaderInterceptor()])
+    return _get_or_create_client().get_service(serviceName, interceptors=[MCPHeaderInterceptor()])
 
 
 def get_googleads_type(typeName: str):
-    return _googleads_client.get_type(typeName)
+    return _get_or_create_client().get_type(typeName)
 
 
 def _is_repeated_container(value: Any) -> bool:
