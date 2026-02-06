@@ -11,10 +11,14 @@ const API_TOKEN = process.env.API_TOKEN;
 const VENTURELAB_CUSTOMER_ID = "7725201935";
 const MCC_LOGIN_CUSTOMER_ID = "5175250506";
 
-if (!MCP_URL) throw new Error("Missing MCP_URL");
-if (!API_TOKEN) throw new Error("Missing API_TOKEN");
+if (!MCP_URL) console.error("WARNING: MCP_URL is not set. API calls will fail.");
+if (!API_TOKEN) console.error("WARNING: API_TOKEN is not set. Auth will reject all requests.");
 
 function requireAuth(req, res, next) {
+  if (!API_TOKEN) {
+    return res.status(503).json({ error: "Server misconfigured: API_TOKEN not set" });
+  }
+
   const auth = String(req.headers.authorization || "").trim();
   const xApiKey = String(req.headers["x-api-key"] || "").trim();
   const apiKey = String(req.headers["api-key"] || "").trim();
@@ -65,6 +69,10 @@ function safeJson(value) {
 }
 
 async function callMcpTool(toolName, args) {
+  if (!MCP_URL) {
+    throw new Error("Server misconfigured: MCP_URL not set");
+  }
+
   const body = {
     jsonrpc: "2.0",
     id: Date.now(),
@@ -134,7 +142,15 @@ function normalizeConditions(body) {
   return [];
 }
 
-app.get("/healthz", (_req, res) => res.send("ok"));
+app.get("/healthz", (_req, res) => {
+  const missing = [];
+  if (!MCP_URL) missing.push("MCP_URL");
+  if (!API_TOKEN) missing.push("API_TOKEN");
+  if (missing.length > 0) {
+    return res.status(200).json({ status: "degraded", missing });
+  }
+  res.send("ok");
+});
 
 // VentureLab info endpoint
 app.get("/api/info", requireAuth, (_req, res) => {
