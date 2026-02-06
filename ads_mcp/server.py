@@ -24,7 +24,7 @@ from ads_mcp.tools import search, core  # noqa: F401
 
 
 def run_server() -> None:
-    mcp.run()
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

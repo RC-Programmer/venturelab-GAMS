@@ -19,6 +19,23 @@ server using `@mcp.tool` annotations, thereby 'coordinating' the bootstrapping
 of the server.
 """
 
-from mcp.server.fastmcp import FastMCP
+import os
 
-mcp = FastMCP("Google Ads Server")
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.server import TransportSecuritySettings
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
+
+mcp = FastMCP(
+    "Google Ads Server",
+    host="0.0.0.0",
+    port=int(os.environ.get("PORT", 8080)),
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+    ),
+)
+
+
+@mcp.custom_route("/healthz", methods=["GET"])
+async def healthz(request: Request) -> PlainTextResponse:
+    return PlainTextResponse("ok")
